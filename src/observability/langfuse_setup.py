@@ -33,6 +33,8 @@ def _langfuse_configured() -> bool:
     """
     public_key = os.getenv("LANGFUSE_PUBLIC_KEY", "").strip()
     secret_key = os.getenv("LANGFUSE_SECRET_KEY", "").strip()
+    print('public_key', public_key)
+    print('secret_key', secret_key)
     return bool(public_key and secret_key)
 
 
@@ -54,24 +56,40 @@ def get_langfuse_handler(session_id: str, user_id: str = "local"):
 
     try:
         from langfuse.langchain import CallbackHandler
+        # from langfuse import get_client, propagate_attributes
+        # langfuse = get_client()
 
-        handler = CallbackHandler(
-            public_key=os.getenv("LANGFUSE_PUBLIC_KEY"),
-            secret_key=os.getenv("LANGFUSE_SECRET_KEY"),
-            host=os.getenv("LANGFUSE_HOST", "http://localhost:3000"),
-            session_id=session_id,
-            user_id=user_id,
-            # Tags appear in the Langfuse UI, useful for filtering
-            # traces from this tutorial vs other projects
-            tags=["learning-accelerator", "local-inference"],
-            metadata={
-                "model": os.getenv("OLLAMA_MODEL", "qwen2.5:7b"),
-                "framework": "langgraph",
-            },
-        )
+        # with propagate_attributes(
+        #     trace_name="Learning Platform",
+        #     session_id=session_id,
+        #     user_id=user_id,
+        #     tags=["learning-accelerator", "local-inference"],
+        #     metadata={
+        #         "model": os.getenv("OLLAMA_MODEL", "qwen2.5:7b"),
+        #         "framework": "langgraph",
+        #     },
+        # ):
+        handler = CallbackHandler()
         return handler
-    except ImportError:
-        print("[Observability] langfuse not installed. Run: pip install langfuse")
+
+        # handler = CallbackHandler(
+        #     public_key=os.getenv("LANGFUSE_PUBLIC_KEY"),
+        #     secret_key=os.getenv("LANGFUSE_SECRET_KEY"),
+        #     host=os.getenv("LANGFUSE_BASE_URL", "http://localhost:3000"),
+        #     # host=os.getenv("LANGFUSE_HOST", "http://localhost:3000"), #
+        #     session_id=session_id,
+        #     user_id=user_id,
+        #     tags=["learning-accelerator", "local-inference"],
+        #     metadata={
+        #         "model": os.getenv("OLLAMA_MODEL", "qwen2.5:7b"),
+        #         "framework": "langgraph",
+        #     },
+        # )
+        # return handler
+                
+        
+    except ImportError as e:
+        print(f"[Observability] langfuse not installed. Run: pip install langfuse. Error: {e}")
         return None
     except Exception as e:
         print(f"[Observability] Failed to create Langfuse handler: {e}")
@@ -116,6 +134,15 @@ def get_langfuse_config(
     handler = get_langfuse_handler(session_id, user_id)
     if handler:
         config["callbacks"] = [handler]
+        config["metadata"] = {
+            "langfuse_user_id": user_id,
+            "langfuse_session_id": session_id,
+            "langfuse_tags": ["my-studies", "studyig-lang-fuse"],
+            "langfuse_metadata": {
+                "model": os.getenv("OLLAMA_MODEL", "qwen2.5:7b"),
+                "framework": "langgraph",
+            },
+        }
         print(f"[Observability] Tracing session {session_id} → "
               f"{os.getenv('LANGFUSE_HOST', 'http://localhost:3000')}")
     else:
